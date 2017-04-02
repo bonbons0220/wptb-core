@@ -31,8 +31,8 @@ defined('ABSPATH') or die("Unknown Access Error");
 if ( defined( 'WPTB_CORE_VERSION' ) ) die('WPTB-Core Plugin version ' . WPTB_CORE_VERSION . ' is already running.');
 define('WPTB_CORE_VERSION', '1.0.0');
 
-define('WPTB_DIR_PATH',plugin_dir_path( __FILE__ ));
-define('WPTB_DIR_URL',plugins_url());
+define( 'WPTB_DIR_PATH' , trailingslashit( plugin_dir_path( __FILE__ ) ) );
+define( 'WPTB_DIR_URL' , trailingslashit( plugins_url( ) ) );
 
 /**
  * Gets the instance of the `WPTB_Core_Plugin` class.  This function is useful for quickly grabbing data

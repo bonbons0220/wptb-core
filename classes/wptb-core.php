@@ -14,15 +14,17 @@
  */
 final class WPTB_Core_Plugin {
 
-	public $dir_path = '';
-	public $dir_uri = '';
 	public $admin_dir = '';
-	public $lib_dir = '';
+	public $classes_dir = '';
 	public $templates_dir = '';
 	public $css_uri = '';
 	public $js_uri = '';
 
 	public $options = array();
+
+	/********************************************************************************/
+	/*	SETUP AND ACTIVATION FUNCTIONS												*/
+	/********************************************************************************/
 	
 	/**
 	 * Returns the instance.
@@ -45,17 +47,22 @@ final class WPTB_Core_Plugin {
 	 * Constructor method.
 	 */
 	private function __construct() {
-		
-		//Add page(s) to the Admin Menu
-		add_action( 'admin_menu' , array( $this , 'wptb_menu' ) );
-		
-		// Ensure this plug in loaded first.
-		add_action("activated_plugin", array( $this , "wptb_core_first") );
-		
-		$this->get_options();
 
 	}
 	
+	/**
+	 * Sets up globals.
+	 */
+	private function setup() {
+
+		// Plugin directory paths.
+		$this->classes_dir   = WPTB_DIR_PATH . 'classes/';
+
+		// Plugin directory URIs.
+		$this->css_uri = WPTB_DIR_URL . 'css/';
+		$this->js_uri  = WPTB_DIR_URL . 'js/';
+	}
+
 	 /**
 	 * Get WPTB_Core Options
 	**/
@@ -64,34 +71,60 @@ final class WPTB_Core_Plugin {
 		// Get Options
 		$my_options = get_option( 'wptb_options', "" );
 		
-		// Parse Options
 	}
 	
-	 /**
-	 * Add shortcodes menu
-	**/
-	function wptb_menu() {
+	/**
+	 * Loads files needed by the plugin.
+	 */
+	private function includes() {
 
-		// Add a main menu item and page Admin  Menu
-		add_menu_page( 'WP TextBook Options' , 'WP TextBook Options' , 'activate_plugins' , 'wptb-options' , WPTB_Preface_Plugin::wptb_options_page , 'dashicons-book-alt' );
-		
-		// Move to Preface Plugin
-		//add_submenu_page( 'wptb-options' , 'WP TextBook Options' , 'Options' , 'wptb-options-page' , 'wptb-options-page' , 'wptb_options_page' );
-		
+		// Load admin/backend files.
+		if ( is_admin() ) {
+
+			//Add page(s) to the Admin Menu
+			add_action( 'admin_menu' , array( $this , 'wptb_menu' ) );
+			
+			$this->get_options();
+			
+		}
 	}
 
 	/**
-	 * Wrap HTML elements as tags with elements.
+	 * Sets up main plugin actions and filters.
+	 */
+	private function setup_actions() {
+
+		// Register activation hook.
+		register_activation_hook( __FILE__, array( $this, 'activation' ) );
+
+	}
+
+	/**
+	 * Method that runs only when the plugin is activated.
+	 */
+	public function activation() {
+
+	}
+
+	/********************************************************************************/
+	/*	CORE FUNCTIONS												*/
+	/********************************************************************************/
+	
+	 /**
+	 * Add menus and pages
 	**/
-	function wptb_html( $tag="" , $content="", $atr=array() , $self=false ) {
-		if ( empty( $tag ) ) return $content;
+	function wptb_menu() {
+
+
+		// Add a main menu item and page Admin Menu
+		add_menu_page( 'WP TextBook' , 'WP TextBook' , 'activate_plugins' , 'wptb-options' , array( $this , 'wptb_options_page' ) , 'dashicons-book-alt' );
 		
-		$atts = "";
-		foreach ( $atr as $key=>$value ) {
-			$atts = "$key='$value' ";
-		}
-		$content = ( $self ) ? "<$tag $atts/>" : "<$tag $atts>$content</$tag>" ;
-		return $content;
+		// General Options
+		add_submenu_page( 'wptb-options' , '' , '' , 'activate_plugins', 'wptb-options-page', array( $this , 'wptb_options_page' ) );
+
+		// Preface Options
+		add_submenu_page( 'wptb-options' , 'Preface' , 'Preface' , 'activate_plugins', 'wptb-preface-page', array( $this , 'wptb_preface_page' ) );
+ 
 	}
 
 	/**
@@ -99,16 +132,29 @@ final class WPTB_Core_Plugin {
 	**/
 	function wptb_options_page() {
 		
-		if ( !current_user_can( 'activate_plugins' ) )  {
+		if ( !current_user_can( 'activate_plugins' ) ) {
 				wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
 		}
 
-		$page_title = 	$this->wptb_html( "h2" , "TextBook Options" );
+		echo ($this->wptb_html( "h2" , "TextBook Settings" ) );
+		echo ($this->wptb_html( "h3" , get_bloginfo( "name" ) ) );
+		echo ( $this->wptb_html( "pre" , WPTB_DIR_PATH ) );
+		echo ( $this->wptb_html( "pre" , WPTB_DIR_URL ) );
 		
-		$title_row = $this->wptb_html( "tr" , 
-							$this->wptb_html( "th" , "TextBook Title" ) .
-							$this->wptb_html( "td" ,
-								$this->wptb_html( "h3" , get_bloginfo( "name" ) ) ) );
+	}
+
+	/**
+	 * Show Dashboard page 
+	**/
+	function wptb_preface_page() {
+		
+		if ( !current_user_can( 'activate_plugins' ) )  {
+				wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+		}
+		require_once( $this->classes_dir . "wptb-preface.php" );
+		
+
+		$page_title = 	$this->wptb_html( "h2" , "TextBook Preface" );
 		
 		$author_rows = $this->wptb_html( "tr" , 
 							$this->wptb_html( "th" , 
@@ -116,17 +162,25 @@ final class WPTB_Core_Plugin {
 							$this->wptb_html( "td" ,
 								$this->wptb_html( "input" , "" , array( "type"=>"text" , "name"=>"author1" , "size"=>"60" ) , true ) ) ) );
 		
-		$form_table = 	$this->wptb_html( "form" , 
-							$this->wptb_html( "table" , $title_row . $author_rows , 
-							array( "class"=>"form-table" ) ) ) ;
+		$table_rows = $this->wptb_html( "table" , $author_rows );
+		$submit_button = $this->wptb_html( "button" , "Save" , array( "type"=>"submit" ) );
 		
-		$result = $this->wptb_html( "div" , 
-									$page_title . 
-									$form_table , array( "class"=>"wrap" ) );
+		$form_table = 	$this->wptb_html( "form" , 
+							$table_rows . $submit_button , 
+							array( "class"=>"form-table" ) ) ;
+		
+		$result = 	$this->wptb_html( "div" , 
+						$page_title . 
+						$form_table , 
+						array( 
+							"class"=>"wrap" , 
+							"action"=>"/" ,
+							"method"=>"POST" ,
+						)
+					);
 		
 		echo $result;
 	}
-
 
 	//
 	function register_wptb_core_script() {
@@ -154,6 +208,28 @@ final class WPTB_Core_Plugin {
 		
 		return '';
 	}
+	
+	/********************************************************************************/
+	/*	UTILITY FUNCTIONS																*/
+	/********************************************************************************/
+
+	/**
+	 * Wrap HTML elements as tags with elements.
+	**/
+	function wptb_html( $tag="" , $content="", $atr=array() , $self=false ) {
+		if ( empty( $tag ) ) return $content;
+		
+		$atts = "";
+		foreach ( $atr as $key=>$value ) {
+			$atts = "$key='$value' ";
+		}
+		$content = ( $self ) ? "<$tag $atts/>" : "<$tag $atts>$content</$tag>" ;
+		return $content;
+	}
+
+	/********************************************************************************/
+	/*	MAGIC FUNCTIONS																*/
+	/********************************************************************************/
 
 	/**
 	 * Magic method to output a string if trying to use the object as a string.
@@ -185,66 +261,4 @@ final class WPTB_Core_Plugin {
 		return null;
 	}
 
-	/**
-	 * Sets up globals.
-	 */
-	private function setup() {
-
-		// Main plugin directory path and URI.
-		$this->dir_path = trailingslashit( plugin_dir_path( __FILE__ ) );
-		$this->dir_uri  = trailingslashit( plugin_dir_url(  __FILE__ ) );
-
-		// Plugin directory paths.
-		$this->lib_dir       = trailingslashit( $this->dir_path . 'lib'       );
-		$this->admin_dir     = trailingslashit( $this->dir_path . 'admin'     );
-		$this->templates_dir = trailingslashit( $this->dir_path . 'templates' );
-
-		// Plugin directory URIs.
-		$this->css_uri = trailingslashit( $this->dir_uri . 'css' );
-		$this->js_uri  = trailingslashit( $this->dir_uri . 'js'  );
-	}
-
-	/**
-	 * Loads files needed by the plugin.
-	 */
-	private function includes() {
-
-		// Load admin/backend files.
-		if ( is_admin() ) {
-
-			// See if Preface Plug-In exists and load it
-			//require_once( $this->admin_dir . 'functions-admin.php' );
-			
-		}
-	}
-
-	/**
-	 * Sets up main plugin actions and filters.
-	 */
-	private function setup_actions() {
-
-		// Register activation hook.
-		register_activation_hook( __FILE__, array( $this, 'activation' ) );
-
-}
-
-	/**
-	 * Method that runs only when the plugin is activated.
-	 */
-	public function activation() {
-
-	}	
-
-	function wptb_core_first() {
-		// ensure path to this file is via main wp plugin path
-		$wp_path_to_this_file = preg_replace('/(.*)plugins\/(.*)$/', WP_PLUGIN_DIR."/$2", __FILE__);
-		$this_plugin = plugin_basename(trim($wp_path_to_this_file));
-		$active_plugins = get_option('active_plugins');
-		$this_plugin_key = array_search($this_plugin, $active_plugins);
-		if ($this_plugin_key) { // if it's 0 it's the first plugin already, no need to continue
-			array_splice($active_plugins, $this_plugin_key, 1);
-			array_unshift($active_plugins, $this_plugin);
-			update_option('active_plugins', $active_plugins);
-		}
-	}
 }
