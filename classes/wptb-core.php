@@ -14,11 +14,15 @@
  */
 final class WPTB_Core_Plugin {
 
-	public $admin_dir = '';
 	public $classes_dir = '';
-	public $templates_dir = '';
+	public $lib_dir = '';
 	public $css_uri = '';
 	public $js_uri = '';
+	public $assets_uri = '';
+	
+	private $wptb_options;
+	private $wptb_preface;
+	
 
 	public $options = array();
 
@@ -57,10 +61,12 @@ final class WPTB_Core_Plugin {
 
 		// Plugin directory paths.
 		$this->classes_dir   = WPTB_DIR_PATH . 'classes/';
+		$this->lib_dir   = WPTB_DIR_PATH . 'lib/';
 
 		// Plugin directory URIs.
 		$this->css_uri = WPTB_DIR_URL . 'css/';
 		$this->js_uri  = WPTB_DIR_URL . 'js/';
+		$this->assets_uri  = WPTB_DIR_URL . 'assets/';
 	}
 
 	 /**
@@ -78,14 +84,20 @@ final class WPTB_Core_Plugin {
 	 */
 	private function includes() {
 
+		// Load frontend files.
+		require_once( $this->lib_dir . "functions.php" );
+		
 		// Load admin/backend files.
 		if ( is_admin() ) {
 
-			//Add page(s) to the Admin Menu
-			add_action( 'admin_menu' , array( $this , 'wptb_menu' ) );
+			require_once( $this->classes_dir . "wptb-base.php" );
 			
-			$this->get_options();
+			require_once( $this->classes_dir . "wptb-options.php" );
+			$this->wptb_options = new WPTB_Options;
 			
+			require_once( $this->classes_dir . "wptb-preface.php" );
+			$this->wptb_preface = new WPTB_Preface;
+					
 		}
 	}
 
@@ -107,89 +119,14 @@ final class WPTB_Core_Plugin {
 	}
 
 	/********************************************************************************/
-	/*	CORE FUNCTIONS												*/
+	/*	CORE FUNCTIONS																*/
 	/********************************************************************************/
 	
-	 /**
-	 * Add menus and pages
-	**/
-	function wptb_menu() {
-
-
-		// Add a main menu item and page Admin Menu
-		add_menu_page( 'WP TextBook' , 'WP TextBook' , 'activate_plugins' , 'wptb-options' , array( $this , 'wptb_options_page' ) , 'dashicons-book-alt' );
-		
-		// General Options
-		add_submenu_page( 'wptb-options' , '' , '' , 'activate_plugins', 'wptb-options-page', array( $this , 'wptb_options_page' ) );
-
-		// Preface Options
-		add_submenu_page( 'wptb-options' , 'Preface' , 'Preface' , 'activate_plugins', 'wptb-preface-page', array( $this , 'wptb_preface_page' ) );
- 
-	}
-
-	/**
-	 * Show Dashboard page 
-	**/
-	function wptb_options_page() {
-		
-		if ( !current_user_can( 'activate_plugins' ) ) {
-				wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-		}
-
-		echo ($this->wptb_html( "h2" , "TextBook Settings" ) );
-		echo ($this->wptb_html( "h3" , get_bloginfo( "name" ) ) );
-		echo ( $this->wptb_html( "pre" , WPTB_DIR_PATH ) );
-		echo ( $this->wptb_html( "pre" , WPTB_DIR_URL ) );
-		
-	}
-
-	/**
-	 * Show Dashboard page 
-	**/
-	function wptb_preface_page() {
-		
-		if ( !current_user_can( 'activate_plugins' ) )  {
-				wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-		}
-		require_once( $this->classes_dir . "wptb-preface.php" );
-		
-
-		$page_title = 	$this->wptb_html( "h2" , "TextBook Preface" );
-		
-		$author_rows = $this->wptb_html( "tr" , 
-							$this->wptb_html( "th" , 
-								$this->wptb_html( "label" , "Author" , array( "for"=>"author1") ) .
-							$this->wptb_html( "td" ,
-								$this->wptb_html( "input" , "" , array( "type"=>"text" , "name"=>"author1" , "size"=>"60" ) , true ) ) ) );
-		
-		$table_rows = $this->wptb_html( "table" , $author_rows );
-		$submit_button = $this->wptb_html( "button" , "Save" , array( "type"=>"submit" ) );
-		
-		$form_table = 	$this->wptb_html( "form" , 
-							$table_rows . $submit_button , 
-							array( "class"=>"form-table" ) ) ;
-		
-		$result = 	$this->wptb_html( "div" , 
-						$page_title . 
-						$form_table , 
-						array( 
-							"class"=>"wrap" , 
-							"action"=>"/" ,
-							"method"=>"POST" ,
-						)
-					);
-		
-		echo $result;
-	}
-
 	//
 	function register_wptb_core_script() {
 		
 		//Scripts to be Registered, but not enqueued
-		//This example requires jquery 
 		//wp_register_script( 'wptb-script', $this->js_uri . "wptb-core.js", array( 'jquery' ), '1.0.0', true );
-		
-		//Styles to be Registered, but not enqueued
 		//wp_register_style( 'wptb-style', $this->css_uri . "wptb-core.css" );
 		
 		//Scripts and Styles to be Enqueued on every page.
@@ -209,24 +146,6 @@ final class WPTB_Core_Plugin {
 		return '';
 	}
 	
-	/********************************************************************************/
-	/*	UTILITY FUNCTIONS																*/
-	/********************************************************************************/
-
-	/**
-	 * Wrap HTML elements as tags with elements.
-	**/
-	function wptb_html( $tag="" , $content="", $atr=array() , $self=false ) {
-		if ( empty( $tag ) ) return $content;
-		
-		$atts = "";
-		foreach ( $atr as $key=>$value ) {
-			$atts = "$key='$value' ";
-		}
-		$content = ( $self ) ? "<$tag $atts/>" : "<$tag $atts>$content</$tag>" ;
-		return $content;
-	}
-
 	/********************************************************************************/
 	/*	MAGIC FUNCTIONS																*/
 	/********************************************************************************/
