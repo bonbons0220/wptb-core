@@ -19,4 +19,12 @@ function wptb_html( $tag="" , $content="", $atr=array() , $self=false ) {
 	$content = ( $self ) ? "<$tag $atts/>" : "<$tag $atts>$content</$tag>" ;
 	return $content;
 }
-
+/**
+ * Add custom URL query arguments
+**/
+// THIS DOES NOT SEEM TO WORK ON THE ADMIN SIDE
+function wptb_add_query_vars_filter( $vars ){
+  // set_query_vars does not work in dashboard. use $_POST instead
+  //$vars[] = "wptb-action";
+  return $vars;
+}

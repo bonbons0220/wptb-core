@@ -16,7 +16,9 @@ class WPTB_Preface extends WPTB_Base {
 	/********************************************************************************/
 	/*	CLASS VARIABLES																*/
 	/********************************************************************************/
-
+	public $possible_actions = array();
+	public $message = '';
+	
 	/********************************************************************************/
 	/*	SETUP FUNCTIONS																*/
 	/********************************************************************************/
@@ -40,14 +42,18 @@ class WPTB_Preface extends WPTB_Base {
 		
 		parent::setup();
 		$this->toString = 'wptb_preface';
+		$this->slug = 'wptb-preface-page';
+		$this->possible_actions = array(
+			'save'
+		);
 
 		// Set up default options
 		$this->default_options = array(
-			'version'=>"1.0.0",
+			'version'=>"1.0",
 			'authors'=>array( 
 				array(
-					'name'=>'John Doe',
-					'affiation'=>'Catatonic State University',
+					'name'=>'',
+					'affiation'=>'',
 				),
 			),
 			'custom'=>array( 
@@ -79,7 +85,7 @@ class WPTB_Preface extends WPTB_Base {
 	function wptb_menu() {
 
 		// Preface Options
-		add_submenu_page( 'wptb-options' , 'Preface' , 'Preface' , 'activate_plugins', 'wptb-preface-page', array( $this , 'wptb_show_page' ) );
+		add_submenu_page( 'wptb-options' , 'Preface' , 'Preface' , $this->capability, $this->slug, array( $this , 'wptb_show_page' ) );
  
 	}
 
@@ -88,15 +94,26 @@ class WPTB_Preface extends WPTB_Base {
 	**/
 	function wptb_show_page() {
 		
+		/*****     
+		$this->message .= wptb_html( "div" , 'message_here' , array('class'=>'wp-ui-notification' ) );
+		*****/
+
 		parent::wptb_show_page();
 				
-		// Debug thing
-		$debug = '' ;
-		//$debug .= ( WPTB_DEBUG ) ? wptb_html( "pre" , var_export( $this->options , true ) ) : '' ;
+		/*****     CHECK ACTION==SAVE     *****/
+
+		$action = ( isset( $_POST['wptb-action'] ) && ( in_array( $_POST['wptb-action'] , $this->possible_actions ) ) ) ? 
+			$_POST['wptb-action'] : 
+			false ;
+		if ( $action ) {
+			check_admin_referer( $this->toString , '_wpnonce' );
+			$this->do_action( $action );
+		}
 		
+		/*****     SHOW THE PREFACE OPTIONS PAGE     *****/
 		$page_title = wptb_html( "h2" , "TextBook Preface" );
 		
-		// loop though options/form_options to create prefilled form .
+		// loop though options/form_options to display prefilled form .
 		
 		$version_row = wptb_html( "tr" , 
 							wptb_html( "th" , 
@@ -126,7 +143,6 @@ class WPTB_Preface extends WPTB_Base {
 
 
 			foreach ( $value as $authorkey=>$authorvalue ) {
-				//$debug .= ( WPTB_DEBUG ) ? wptb_html( "pre" , var_export( $authorvalue , true ) ) : '' ;
 			
 				$author_rows .= wptb_html( "tr" , 
 								wptb_html( "td" , 
@@ -156,11 +172,36 @@ class WPTB_Preface extends WPTB_Base {
 		$submit_button = wptb_html( "button" , "Save" , array( "type"=>"submit" ) );
 		
 		$form_table = 	wptb_html( "form" , 
-							$table_rows . $submit_button , 
-							array( "class"=>"form-table" ) ) ;
+							wptb_html(
+								"input" , 
+								" " , 
+								array( 
+									"type"=>"hidden" , 
+									"name"=>('page') ,
+									"value"=>( $this->slug ) ,
+								) , 
+								true ) .
+							wptb_html(
+								"input" , 
+								" " , 
+								array( 
+									"type"=>"hidden" , 
+									"name"=>('wptb-action') ,
+									"value"=>( 'save' ) ,
+								) , 
+								true ) .
+							$table_rows . 
+							wp_nonce_field( $this->toString , '_wpnonce' , false , false ) . 
+							$submit_button , 
+							array( 
+								"class"=>"form-table" ,
+								"action"=>"" ,
+								"method"=>"post" ,
+							)
+						);
 		
 		$result = 	wptb_html( "div" , 
-						$debug .
+						$this->message .
 						$page_title . 
 						$form_table , 
 						array( 
@@ -173,4 +214,21 @@ class WPTB_Preface extends WPTB_Base {
 		echo $result;
 	}
 
-}
+	}
+	
+	/********************************************************************************/
+	/*	UTILITY FUNCTIONS															*/
+	/********************************************************************************/
+	
+	/**
+	 * Deal with action
+	**/
+	function do_action( $action = false ) {
+		switch ( $action ) :
+			case ( 'save' ):
+				//foreach (  )
+				
+				break;
+			default:
+				break;
+	}

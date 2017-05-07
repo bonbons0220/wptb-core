@@ -23,7 +23,6 @@ final class WPTB_Core_Plugin {
 	private $wptb_options;
 	private $wptb_preface;
 	
-
 	public $options = array();
 
 	/********************************************************************************/
@@ -67,6 +66,7 @@ final class WPTB_Core_Plugin {
 		$this->css_uri = WPTB_DIR_URL . 'css/';
 		$this->js_uri  = WPTB_DIR_URL . 'js/';
 		$this->assets_uri  = WPTB_DIR_URL . 'assets/';
+		
 	}
 
 	 /**
@@ -109,6 +109,9 @@ final class WPTB_Core_Plugin {
 		// Register activation hook.
 		register_activation_hook( __FILE__, array( $this, 'activation' ) );
 
+		// FILTERS
+		//add_filter( 'query_vars', array( $this , 'wptb_add_query_vars_filter' ) );
+		add_filter( 'query_vars', 'wptb_add_query_vars_filter' );
 	}
 
 	/**

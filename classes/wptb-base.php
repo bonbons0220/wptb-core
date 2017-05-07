@@ -19,6 +19,8 @@ class WPTB_Base {
 	public $options = array();
 	public $default_options = array();
 	public $form_options = array();
+	public $slug = '';
+	public $capability = '';
 	public $toString = '';
 	public $assets_uri = '';
 	
@@ -43,6 +45,7 @@ class WPTB_Base {
 	public function setup() {
 		
 		$this->toString = 'wptb_base';
+		$this->capability = 'activate_plugins';
 		$this->assets_uri  = WPTB_DIR_URL . 'assets/';
 		
 	}
